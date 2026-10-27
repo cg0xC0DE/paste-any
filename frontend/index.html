@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Paste-Any - 快速文本传输</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>📋 Paste-Any</h1>
+            <p class="subtitle">文本 / 图片快速传输</p>
+        </header>
+
+        <div class="expire-notice">提取码 180 秒内有效，使用后立即失效</div>
+
+        <main class="main">
+            <div
+                id="content"
+                class="textarea"
+                contenteditable="true"
+                data-placeholder="在这里粘贴或输入文本...&#10;&#10;Ctrl+V 或右键粘贴可插入图片"
+            ></div>
+
+            <div id="urlBar" class="url-bar"></div>
+
+            <div class="controls">
+                <div class="code-input-group">
+                    <input
+                        type="text"
+                        id="codeInput"
+                        class="code-input"
+                        placeholder="提取码"
+                        maxlength="4"
+                        autocomplete="off"
+                    >
+                    <button id="fetchBtn" class="btn btn-secondary" disabled>
+                        取出
+                    </button>
+                </div>
+                <button id="storeBtn" class="btn btn-primary">
+                    存入
+                </button>
+            </div>
+
+            <div id="status" class="status" role="status"></div>
+        </main>
+
+        <footer class="footer">
+            <div class="footer-left">
+                <span class="copyright">© cg0xC0DE</span>
+                <a href="weixin://" class="wechat-link" title="微信: cq4biz">
+                    <img src="./img/wechat.png" alt="微信" class="wechat-icon">
+                </a>
+                <span class="wechat-id">cq4biz</span>
+            </div>
+            <span class="expire-tip">提取码 180 秒内有效，使用后失效</span>
+        </footer>
+    </div>
+
+    <script src="./loadbalancer.js"></script>
+    <script src="./app.js"></script>
+</body>
+</html>

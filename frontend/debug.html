@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Clipboard Debug</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a2e; color: #fff; }
+        #log { white-space: pre-wrap; background: #333; padding: 15px; border-radius: 8px; margin-top: 20px; }
+        .info { color: #00d9ff; }
+        .warn { color: #ffaa00; }
+        .error { color: #ff5757; }
+    </style>
+</head>
+<body>
+    <h2>Clipboard Debug</h2>
+    <p>从文件管理器复制一个图片文件，然后点击下方按钮查看剪贴板内容</p>
+    <button onclick="debugClipboard()" style="padding:10px 20px;cursor:pointer;">查看剪贴板</button>
+    <div id="log"></div>
+
+    <script>
+    function log(msg, type='info') {
+        const div = document.createElement('div');
+        div.className = type;
+        div.textContent = msg;
+        document.getElementById('log').appendChild(div);
+    }
+
+    function debugClipboard() {
+        log('=== Clipboard Debug ===', 'info');
+
+        const clipboardData = window.clipboardData || navigator.clipboard;
+        log('clipboardData: ' + (clipboardData ? typeof clipboardData : 'null'));
+
+        // 尝试 navigator.clipboard.read()
+        if (navigator.clipboard && navigator.clipboard.read) {
+            log('尝试 navigator.clipboard.read()...', 'info');
+            navigator.clipboard.read().then(items => {
+                log('navigator.clipboard.read() 返回 ' + items.length + ' 个 items', 'info');
+                items.forEach((item, i) => {
+                    log('  Item ' + i + ': kinds=' + JSON.stringify(item.types), 'info');
+                    item.types.forEach(type => {
+                        log('    ' + type, 'warn');
+                    });
+                });
+            }).catch(err => {
+                log('navigator.clipboard.read() 失败: ' + err.message, 'error');
+            });
+        }
+
+        // 模拟 paste 事件
+        log('请在页面中按 Ctrl+V 或 Command+V', 'warn');
+
+        document.addEventListener('paste', function handler(e) {
+            log('\n=== Paste Event Fired ===', 'info');
+            log('clipboardData: ' + (e.clipboardData ? 'exists' : 'null'));
+
+            if (e.clipboardData) {
+                log('files.length: ' + e.clipboardData.files.length, 'info');
+                for (let i = 0; i < e.clipboardData.files.length; i++) {
+                    const f = e.clipboardData.files[i];
+                    log('  File ' + i + ': name=' + f.name + ', type=' + f.type + ', size=' + f.size, 'warn');
+                }
+
+                log('items.length: ' + e.clipboardData.items.length, 'info');
+                for (let item of e.clipboardData.items) {
+                    log('  Item: kind=' + item.kind + ', type=' + item.type, 'info');
+                    if (item.kind === 'file') {
+                        try {
+                            const f = item.getAsFile();
+                            if (f) {
+                                log('    getAsFile(): name=' + f.name + ', type=' + f.type + ', size=' + f.size, 'warn');
+                            }
+                        } catch (err) {
+                            log('    getAsFile() error: ' + err.message, 'error');
+                        }
+                    }
+                }
+            }
+
+            document.removeEventListener('paste', handler);
+        }, { once: false });
+    }
+    </script>
+</body>
+</html>
