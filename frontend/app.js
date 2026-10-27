@@ -23,6 +23,37 @@ const storeBtnEl = document.getElementById('storeBtn');
 const fetchBtnEl = document.getElementById('fetchBtn');
 const statusEl = document.getElementById('status');
 
+/**
+ * 带重试的 fetch。
+ * ngrok 免费域名的边缘节点会随机丢连接（实测公网成功率约 77%，
+ * 失败表现为 "Error in the HTTP2 framing layer" / "Connection reset by peer"，
+ * 且这些请求根本没有到达 nginx）。
+ * 重试 3 次 + 退避后成功率恢复到 100%。
+ */
+async function fetchWithRetry(url, options = {}, retries = 3) {
+    const BACKOFF_MS = [0, 400, 900];
+    let lastError;
+
+    for (let attempt = 0; attempt < retries; attempt++) {
+        if (BACKOFF_MS[attempt]) {
+            await new Promise((r) => setTimeout(r, BACKOFF_MS[attempt]));
+        }
+        try {
+            const response = await fetch(url, options);
+            // 5xx 也重试：后端抖动时值得再试一次
+            if (response.status >= 500 && attempt < retries - 1) {
+                lastError = new Error(`HTTP ${response.status}`);
+                continue;
+            }
+            return response;
+        } catch (error) {
+            lastError = error;
+            console.warn(`[retry] attempt ${attempt + 1}/${retries} failed:`, error.message);
+        }
+    }
+    throw lastError || new Error('请求失败');
+}
+
 // URL 检测 & 展示
 const URL_RE = /(?:https?:\/\/)[^\s<>"'`]+/gi;
 const urlBarEl = document.getElementById('urlBar');
@@ -236,7 +267,7 @@ async function storeContent() {
     try {
         const content = contentEl.innerHTML;
 
-        const response = await fetch(`${API_BASE}/pastes`, {
+        const response = await fetchWithRetry(`${API_BASE}/pastes`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -281,7 +312,7 @@ async function fetchContent() {
     fetchBtnEl.textContent = '取出中...';
 
     try {
-        const response = await fetch(`${API_BASE}/pastes/${code}`, {
+        const response = await fetchWithRetry(`${API_BASE}/pastes/${code}`, {
             headers: {
                 'ngrok-skip-browser-warning': 'true'
             }

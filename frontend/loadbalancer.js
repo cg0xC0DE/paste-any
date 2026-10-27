@@ -5,17 +5,17 @@
  */
 (function () {
   // 候选公网入口（ngrok 免费域名会轮换，恢复时需更新）
+  // ⚠️ 只保留**当前确实指向本机**的域名。ngrok 会把已释放的免费域名回收给别的用户，
+  //    旧域名会指向第三方服务器——若被选中，用户粘贴的内容就会被发到别人那里。
   var ENDPOINTS = [
     "https://overbrutal-semiexclusively-wilhemina.ngrok-free.dev",
-    "https://illaudable-roseanna-unsobering.ngrok-free.dev",
-    "https://dentiled-gennie-stichometrical.ngrok-free.dev",
   ];
 
   function probeEndpoint(endpoint) {
     var start = performance.now();
 
-    // Strategy 1: cors — full signal (status + body check)
-    return fetch(endpoint, {
+    // Strategy 1: cors — 探测 /paste-api/health 并校验返回体确实是本服务
+    return fetch(endpoint + "/paste-api/health", {
       method: "GET",
       mode: "cors",
       signal: AbortSignal.timeout(5000),
@@ -25,14 +25,17 @@
         var latency = performance.now() - start;
         if (!res.ok) return { endpoint: endpoint, healthy: false, latency: Infinity };
         return res.text().then(function (text) {
+          // 必须包含 service=paste-any，否则可能是一个碰巧同域名的第三方服务
+          var ours = text.indexOf("paste-any") !== -1;
           var bad =
             text.indexOf("ngrok") !== -1 &&
             (text.indexOf("ERR_NGROK") !== -1 || text.indexOf("Tunnel not found") !== -1);
-          return { endpoint: endpoint, healthy: !bad, latency: bad ? Infinity : latency };
+          var healthy = ours && !bad;
+          return { endpoint: endpoint, healthy: healthy, latency: healthy ? latency : Infinity };
         });
       })
       .catch(function () {
-        // Strategy 2: no-cors fallback — check reachability but don't assume healthy
+        // Strategy 2: no-cors fallback — 只能确认可达，**不能**假定它指向本服务
         return fetch(endpoint, {
           method: "HEAD",
           mode: "no-cors",
